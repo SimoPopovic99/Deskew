@@ -6,9 +6,11 @@
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/io.h>
+
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+
 #include <linux/version.h>
 #include <linux/types.h>
 #include <linux/kdev_t.h>
@@ -17,29 +19,37 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 #include <linux/delay.h>
+
 #include <linux/errno.h>
 #include <linux/wait.h>
 #include <linux/semaphore.h>
+
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Deskew driver");
+
+
 #define DEVICE_NAME "deskew" 
 #define DRIVER_NAME "deskew_driver"
+
+
 //buffer size
 #define BUFF_SIZE 784
+
 //addresses for registers
 #define START	0x00
 #define READY	0x04
+
 //*************************************************************************
 static int deskew_probe(struct platform_device *pdev);
 static int deskew_open(struct inode *i, struct file *f);
 static int deskew_close(struct inode *i, struct file *f);
 static ssize_t deskew_read(struct file *f, char __user *buf, size_t len, loff_t *off);
 static ssize_t deskew_write(struct file *f, const char __user *buf, size_t count, loff_t *off);
+
 static int __init deskew_init(void);
 static void __exit deskew_exit(void);
 static int deskew_remove(struct platform_device *pdev);
 
-unsigned int rows, cols;
 //unsigned int rows, cols;
 unsigned int ready, start;
 int endRead = 0;
@@ -55,11 +65,14 @@ struct file_operations my_fops =
 	.write = deskew_write,
 	.release = deskew_close,
 };
+
+
 static struct of_device_id device_of_match[] = {
 	{ .compatible = "xlnx,Deskew-1.0", },
 	{ .compatible = "xlnx,axi-bram-ctrl-4.1", }, 
 	{ /* end of list */ },
 };
+
 static struct platform_driver my_driver = {
     .driver = {
 	.name = DRIVER_NAME,
@@ -69,27 +82,36 @@ static struct platform_driver my_driver = {
     .probe		= deskew_probe,
     .remove	= deskew_remove,
 };
+
 struct device_info {
     unsigned long mem_start;
     unsigned long mem_end;
     void __iomem *base_addr;
 };
+
 static struct device_info *deskew = NULL;
 static struct device_info *bram = NULL;
+
 MODULE_DEVICE_TABLE(of, device_of_match);
+
 static dev_t my_dev_id;
 static struct class *my_class;
 static struct cdev *my_cdev;
+
 //********************************************************************************
 //			PROBE & REMOVE
 //********************************************************************************
+
 int device_fsm = 0;
+
 static int deskew_probe(struct platform_device *pdev)
 {
     
     struct resource *r_mem;
     int rc = 0;
+
     printk(KERN_INFO "Probing\n");
+
     r_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
     if (!r_mem) {
 	printk(KERN_ALERT "invalid address\n");
@@ -178,6 +200,7 @@ static int deskew_remove(struct platform_device *pdev)
       release_mem_region(deskew->mem_start, deskew->mem_end - deskew->mem_start + 1);
       kfree(deskew);
       break;
+
     case 1: //device bram
       printk(KERN_ALERT "bram device platform driver removed\n");
       iowrite32(0, bram->base_addr);
@@ -193,9 +216,11 @@ static int deskew_remove(struct platform_device *pdev)
   printk(KERN_INFO "Succesfully removed driver\n");
   return 0;
 }
+
 //********************************************************
 // OPEN & CLOSE
 //********************************************************
+
 static int deskew_open(struct inode *i, struct file *f)
 {
     printk("deskew opened\n");
@@ -206,16 +231,15 @@ static int deskew_close(struct inode *i, struct file *f)
     printk("deskew closed\n");
     return 0;
 }
+
 //*********************************************************
 //	READ & WRITE
 //*********************************************************
 
 ssize_t deskew_write(struct file *pfile, const char __user *buffer, size_t length, loff_t *offset)
 {
-	
   char buff[BUFF_SIZE];	//ok
   int minor = MINOR(pfile->f_inode->i_rdev);	//ok
-  unsigned int xpos = 0, ypos = 0;
   char val = 0;
   int pos = 0;
   int start;
@@ -245,9 +269,12 @@ ssize_t deskew_write(struct file *pfile, const char __user *buffer, size_t lengt
         iowrite32(val, bram->base_addr + 4*pos);
         printk(KERN_INFO "[WRITE] Succesfully wrote into BRAM device.\n Position = %d \n Value = %d\n", pos, val); 
         break;
+
         default:
+
         printk(KERN_INFO "[WRITE] Invalid minor. \n");
 	}
+
     return length;
 }
 
@@ -283,7 +310,7 @@ ssize_t deskew_read(struct file *pfile, char __user *buffer, size_t length, loff
 			endRead = 1;
 	    }
 		break;
-
+		
 		case 1:
         if(i < 784)
         {
@@ -299,44 +326,54 @@ ssize_t deskew_read(struct file *pfile, char __user *buffer, size_t length, loff
       break;
 	  
       default:
+
       printk(KERN_INFO "[WRITE] Invalid minor. \n");
+
     }
   
    return len;
 		
 }
+
 //**********************************************************
 //		INIT & EXIT
 //**********************************************************
+
 static int __init deskew_init(void)
 {
    printk(KERN_INFO "\n");
    printk(KERN_INFO "deskew driver starting insmod.\n");
+
    if (alloc_chrdev_region(&my_dev_id, 0, 2, "deskew_region") < 0){
       printk(KERN_ERR "failed to register char device\n");
       return -1;
    }
    printk(KERN_INFO "char device region allocated\n");
+
    my_class = class_create(THIS_MODULE, "deskew_class");
    if (my_class == NULL){
       printk(KERN_ERR "failed to create class\n");
       goto fail_0;
    }
    printk(KERN_INFO "class created\n");
+
    if (device_create(my_class, NULL, MKDEV(MAJOR(my_dev_id),0), NULL, "xlnx,deskew") == NULL) {//potrebno je za svaki minor napraviti poseban device
       printk(KERN_ERR "failed to create device deskew\n");
       goto fail_1;
    }
    printk(KERN_INFO "Device created - deskew\n");
+
    if (device_create(my_class, NULL, MKDEV(MAJOR(my_dev_id),1), NULL, "xlnx,bram") == NULL) {//potrebno je za svaki minor napraviti poseban device
      printk(KERN_ERR "failed to create device bram\n");
      goto fail_2;
    }
    printk(KERN_INFO "Device created - BRAM\n");
+
    
 	my_cdev = cdev_alloc();
 	my_cdev->ops = &my_fops;
 	my_cdev->owner = THIS_MODULE;
+
 	if (cdev_add(my_cdev, my_dev_id, 2) == -1)
 	{
       printk(KERN_ERR "failed to add cdev\n");
@@ -344,7 +381,9 @@ static int __init deskew_init(void)
 	}
    printk(KERN_INFO "cdev added\n");
    printk(KERN_INFO "deskew driver initialized.\n");
+
    return platform_driver_register(&my_driver);
+
    fail_3:
      device_destroy(my_class, MKDEV(MAJOR(my_dev_id),1));
    fail_2:
@@ -355,16 +394,25 @@ static int __init deskew_init(void)
       unregister_chrdev_region(my_dev_id, 1);
    return -1;
 }
+
+
+
 static void __exit deskew_exit(void) {
+
     printk(KERN_INFO "deskew driver starting rmmod.\n");
 	  platform_driver_unregister(&my_driver);
     cdev_del(my_cdev);
+
     device_destroy(my_class, MKDEV(MAJOR(my_dev_id),1));
     device_destroy(my_class, MKDEV(MAJOR(my_dev_id),0));
     
     class_destroy(my_class);
     unregister_chrdev_region(my_dev_id, 1);
     printk(KERN_INFO "deskew driver closed.\n");
+
+
 }
+
+
 module_init(deskew_init);// kad u terminulu pozovemo insmod, pozivamo ovaj makro pa on poziva imdct_init (tako nesto)
 module_exit(deskew_exit);//kad u terminulu pozovemo insmod, pozivamo ovaj makro pa on poziva imdct_init (tako nesto)
