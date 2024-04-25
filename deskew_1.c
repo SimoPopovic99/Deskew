@@ -53,7 +53,7 @@ static int deskew_remove(struct platform_device *pdev);
 //unsigned int rows, cols;
 unsigned int ready, start;
 int endRead = 0;
-unsigned int xpos = 0, ypos = 0;
+
 
 
 
@@ -254,20 +254,18 @@ ssize_t deskew_write(struct file *pfile, const char __user *buffer, size_t lengt
 	switch (minor)
 	{
 		case 0:
-		sscanf(buff, "%d, %d, %d", &xpos, &ypos, &start);
-		iowrite32(start, deskew->base_addr + START);
-		udelay(100);
-		if(start == 1)
-		{
-			printk(KERN_INFO "[WRITE] Succesfully started deskew device\n");
-		}
-		iowrite32(xpos, deskew -> base_addr);
-		iowrite32(ypos, deskew -> base_addr);
-		break;
+			sscanf(buff, "%d", &start);
+			iowrite32(start, deskew->base_addr + START);
+			udelay(100);
+			if(start == 1)
+			{
+				printk(KERN_INFO "[WRITE] Succesfully started deskew device\n");
+			}
+			break;
 		case 1:
-		sscanf(buff, "%d %d", &pos, &val);
-        iowrite32(val, bram->base_addr + 4*pos);
-        printk(KERN_INFO "[WRITE] Succesfully wrote into BRAM device.\n Position = %d \n Value = %d\n", pos, val); 
+			sscanf(buff, "%d %d", &pos, &val);
+			iowrite32(val, bram->base_addr + 4*pos);
+			printk(KERN_INFO "[WRITE] Succesfully wrote into BRAM device.\n Position = %d \n Value = %d\n", pos, val); 
         break;
 
         default:
@@ -298,17 +296,18 @@ ssize_t deskew_read(struct file *pfile, char __user *buffer, size_t length, loff
 	{
 		case 0:
 		printk(KERN_INFO "[READ] Reading from deskew device. \n");
-		xpos = ioread32(deskew -> base_addr);
-		printk(KERN_INFO "[READ] Succesfully read xpos. \n");
-		ypos = ioread32(deskew -> base_addr);
-		printk(KERN_INFO "[READ] Succesfully read ypos. \n");
-		len = scnprintf(buff, BUFF_SIZE, "xpos = %d, ypos = %d\n", xpos, ypos); 
+		start = ioread32(deskew -> base_addr + START);
+		printk(KERN_INFO "[READ] Succesfully read start. \n");
+		ready = ioread32(deskew -> base_addr + READY);
+		printk(KERN_INFO "[READ] Succesfully read ready. \n");
+		len = scnprintf(buff, BUFF_SIZE, "start = %d, ready = %d\n", start, ready); 
 		// scnprintf smesta formatirane podatke u bafer, prati velicinu bafera i sprecava prekoracenje 
 		if(copy_to_user(buffer, buff, len))
         {  
 			return -EFAULT;  
-			endRead = 1;
+			
 	    }
+		endRead = 1;
 		break;
 		
 		case 1:
@@ -321,8 +320,9 @@ ssize_t deskew_read(struct file *pfile, char __user *buffer, size_t length, loff
 		if(copy_to_user(buffer, buff, len))
         {
 			return -EFAULT;  
-			endRead = 1;  
+			  
         }
+		endRead = 1;
       break;
 	  
       default:
