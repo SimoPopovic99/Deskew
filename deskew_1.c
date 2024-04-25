@@ -323,7 +323,10 @@ ssize_t deskew_read(struct file *pfile, char __user *buffer, size_t length, loff
 			  
         }
 		if(i == 784)
+		{
 			endRead = 1;
+			i = 0;
+		}
       break;
 	  
       default:
