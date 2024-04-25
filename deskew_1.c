@@ -240,7 +240,7 @@ ssize_t deskew_write(struct file *pfile, const char __user *buffer, size_t lengt
 {
   char buff[BUFF_SIZE];	//ok
   int minor = MINOR(pfile->f_inode->i_rdev);	//ok
-  char val = 0;
+  int val = 0;
   int pos = 0;
   int start;
 	
@@ -263,7 +263,7 @@ ssize_t deskew_write(struct file *pfile, const char __user *buffer, size_t lengt
 			}
 			break;
 		case 1:
-			sscanf(buff, "%d %d", &pos, &val);
+			sscanf(buff, "%d, %d", &pos, &val);
 			iowrite32(val, bram->base_addr + 4*pos);
 			printk(KERN_INFO "[WRITE] Succesfully wrote into BRAM device.\n Position = %d \n Value = %d\n", pos, val); 
         break;
@@ -282,7 +282,7 @@ ssize_t deskew_read(struct file *pfile, char __user *buffer, size_t length, loff
 	char buff[BUFF_SIZE];
 	int minor = MINOR(pfile->f_inode->i_rdev);
 	long int len = 0;
-	unsigned int i = 0;
+	static unsigned int i = 0;
 	int value;
 	
 	if(endRead)
@@ -322,7 +322,8 @@ ssize_t deskew_read(struct file *pfile, char __user *buffer, size_t length, loff
 			return -EFAULT;  
 			  
         }
-		endRead = 1;
+		if(i == 784)
+			endRead = 1;
       break;
 	  
       default:
