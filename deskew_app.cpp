@@ -112,7 +112,7 @@ void read_bram()
 	for (int i = 0; i < 27; i++)
     {
 		for(int j = 0; j < 29; j++)
-			fprintf(bram, "%d, ", value[i*29 + j]);
+			fprintf(bram, "0x%04x, ", value[i*29 + j]);
 		
 		fprintf(bram, "\n");
     }
