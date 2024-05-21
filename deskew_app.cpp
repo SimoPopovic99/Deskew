@@ -107,14 +107,17 @@ void read_bram()
 	
 	fclose(bram);
 	
-	for (int i = 0; i < 784; i++)
+	bram = fopen ("bram.txt", "w");
+	
+	for (int i = 0; i < 27; i++)
     {
-
-		cout << value[i] << endl;
+		for(int j = 0; j < 29; j++)
+			fprintf(bram, "%d, ", value[i*29 + j]);
 		
+		fprintf(bram, "\n");
     }
 
-	
+	fclose(bram);
 	
 	
 
